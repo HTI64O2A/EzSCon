@@ -1,0 +1,14 @@
+{
+  "name": "ezscon",
+  "version": "1.0.0",
+  "description": "small message connection library between Node.js and ESP devices for small or prototype IoT related project.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "clacking",
+  "license": "MIT",
+  "dependencies": {
+    "websocket": "^1.0.28"
+  }
+}
