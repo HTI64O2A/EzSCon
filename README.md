@@ -37,17 +37,22 @@ const char[] host = "192.168.0.1";
 const int port = 8080;
 
 void recive (String m) {
-  Serial.print("Tempeture: ", m);
+  Serial.print("Button toggle");
 }
 
 EZSCON net;
+WiFiMulti WiFiMulti;
+
 void setup() {
   net.setup(host, port);
-  net.addEvent("temperature", recive);
+  net.addEvent("button", recive); // hook event
+  WiFiMulti.addAP("SSID", "PASSWORD"); // Connect wifi
 }
 
 void loop() {
-  net.loop();
+  auto temp = sensor.getTemp(); // Get data...
+  net.sendMessage("temperature", temp); // Sending message
+  net.loop(); // loop
 }
 ```
 

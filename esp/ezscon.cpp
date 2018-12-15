@@ -1,12 +1,13 @@
 
-
 #include <WebSockets.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 
+typedef void (* CB_POINTER)(String); 
+
 struct KV {
 	String key;
-	void (*func)();
+	CB_POINTER func;
 };
 
 class LazyMap {
@@ -14,11 +15,11 @@ private:
 	int count = 0;
 	KV funcs[];
 public:
-	void addEvent(String k, void (*function)(String));
+	void addEvent(String k, CB_POINTER);
 	bool call(String key, String val);
 };
 
-void LazyMap::addEvent(String k, void (*function)(String)) {
+void LazyMap::addEvent(String k, CB_POINTER function) {
 	int n = this->count++;
 	this->funcs[n].key = k;
 	this->funcs[n].func = function;
@@ -40,18 +41,19 @@ private:
 	WebSocketsClient webSocket;
 	StaticJsonBuffer<200> buf;
 public:
-	void setup(const char[] host, int port);
+	void setup(const char host[], int port);
 	void loop();
-	void addEvent(String k, void (*function)(String));
+	void addEvent(String k, CB_POINTER function);
 	void eventHandler(WStype_t type, uint8_t * payload, size_t length);
 	void dispacher(uint8_t *payload);
-	void sendMessage(String event, String message);
+	template<typename T>
+	void sendMessage(String event, T message);
 	//void sendMessage(const char* event, const char* message);
-}
+};
 
-void EZSCON::setup(const char[] host, int port) {
+void EZSCON::setup(const char host[], int port) {
 	this->webSocket.begin(host, port);
-	this->webSocket.onEvent(this->eventHandler);
+	this->webSocket.onEvent([&](WStype_t type, uint8_t * payload, size_t length) { this->eventHandler(type, payload, length); });
 	this->webSocket.setReconnectInterval(5000);
 }
 
@@ -59,7 +61,7 @@ void EZSCON::loop() {
 	this->webSocket.loop();
 }
 
-void addEvent(String k, void (*function)(String)) {
+void EZSCON::addEvent(String k, CB_POINTER function) {
 	this->map.addEvent(k, function);
 }
 
@@ -70,12 +72,12 @@ void EZSCON::eventHandler(WStype_t type, uint8_t * payload, size_t length) {
 			this->dispacher(payload);
 			break;
 		// TODO other handling.
-		case default:
+		default:
 			break;
 	}
 }
 
-void dispacher(uint8_t *payload) {
+void EZSCON::dispacher(uint8_t *payload) {
 	char* json = (char*)payload;
 	JsonObject& object = this->buf.parseObject(json);
 	
@@ -85,11 +87,12 @@ void dispacher(uint8_t *payload) {
 	this->map.call(event, value);
 }
 
-void sendMessage(String event, String message) {
+template<typename T>
+void EZSCON::sendMessage(String event, T message) {
 	JsonObject& root = this->buf.createObject();
 	String json;
 	root["event"] = event;
-	root["message"] = Message;
+	root["message"] = message;
 	root.printTo(json);
 	this->webSocket.sendTXT(json);
 }
